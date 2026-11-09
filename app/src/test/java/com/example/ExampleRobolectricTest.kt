@@ -53,4 +53,13 @@ class ExampleRobolectricTest {
     assertTrue(pitch in 0.5f..2.0f)
     assertTrue(speed in 0.25f..3.0f)
   }
+
+  @Test
+  fun `verify voice clone profiles exist`() {
+    val profiles = com.example.model.VoiceClonePresets.profiles
+    assertTrue(profiles.isNotEmpty())
+    val bae = profiles.find { it.id == "bae_calms_you" }
+    assertNotNull(bae)
+    assertEquals(0.78f, bae!!.pitchMultiplier, 0.01f)
+  }
 }

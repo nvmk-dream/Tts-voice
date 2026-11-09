@@ -18,8 +18,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
+import com.example.audio.VoiceCloningEngine
+import com.example.model.ClonedVoiceProfile
+import com.example.model.VoiceClonePresets
+import com.example.model.VoiceCloneState
+import com.example.model.VoiceCloningMode
 
 data class StudioUiState(
     val currentTab: Int = 0, // 0 = FineVoice & ASMR Characters, 1 = Studio & Build, 2 = Saved Audio
@@ -40,12 +46,16 @@ data class StudioUiState(
     val showBuildVoiceDialog: Boolean = false,
     val exportSuccessMessage: String? = null,
     val previewingItemName: String? = null,
-    val savedHistory: List<AudioMetadataInfo> = emptyList()
+    val savedHistory: List<AudioMetadataInfo> = emptyList(),
+    val cloneState: com.example.model.VoiceCloneState = com.example.model.VoiceCloneState(
+        selectedProfile = com.example.model.VoiceClonePresets.profiles.first()
+    )
 )
 
 class TtsViewModel(application: Application) : AndroidViewModel(application) {
 
     val ttsManager = TtsEngineManager(application)
+    val cloningEngine = VoiceCloningEngine(application, ttsManager)
 
     private val _uiState = MutableStateFlow(StudioUiState())
     val uiState: StateFlow<StudioUiState> = _uiState.asStateFlow()
@@ -384,8 +394,122 @@ class TtsViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(isPlayingExported = false)
     }
 
+    // Voice Cloning Handlers
+    fun onCloneProfileSelected(profile: ClonedVoiceProfile) {
+        _uiState.value = _uiState.value.copy(
+            cloneState = _uiState.value.cloneState.copy(selectedProfile = profile)
+        )
+    }
+
+    fun onCloneModeSelected(mode: VoiceCloningMode) {
+        _uiState.value = _uiState.value.copy(
+            cloneState = _uiState.value.cloneState.copy(selectedMode = mode)
+        )
+    }
+
+    fun onCloneWhisperBoostChanged(percent: Int) {
+        _uiState.value = _uiState.value.copy(
+            cloneState = _uiState.value.cloneState.copy(whisperBoostPercent = percent)
+        )
+    }
+
+    fun onCloneApiKeyChanged(key: String) {
+        _uiState.value = _uiState.value.copy(
+            cloneState = _uiState.value.cloneState.copy(elevenLabsApiKey = key)
+        )
+    }
+
+    fun cloneAndSpeak() {
+        val s = _uiState.value
+        val cs = s.cloneState
+        _uiState.value = s.copy(
+            cloneState = cs.copy(
+                isGenerating = true,
+                isPlaying = false,
+                statusMessage = "குரல் குளோனிங் தொடங்குகிறது..."
+            )
+        )
+
+        viewModelScope.launch {
+            cloningEngine.cloneAndSpeak(
+                rawText = s.inputText,
+                profile = cs.selectedProfile,
+                mode = cs.selectedMode,
+                apiKey = cs.elevenLabsApiKey,
+                whisperBoostPercent = cs.whisperBoostPercent,
+                onProgress = { progress, msg ->
+                    _uiState.value = _uiState.value.let { curr ->
+                        curr.copy(cloneState = curr.cloneState.copy(
+                            currentProgress = progress,
+                            statusMessage = msg
+                        ))
+                    }
+                },
+                onComplete = { file ->
+                    _uiState.value = _uiState.value.let { curr ->
+                        curr.copy(cloneState = curr.cloneState.copy(
+                            isGenerating = false,
+                            isPlaying = true,
+                            lastGeneratedFile = file,
+                            statusMessage = "'${cs.selectedProfile.nameTa}' விஸ்பர் குரலில் ஒலிக்கிறது..."
+                        ))
+                    }
+                },
+                onError = { err ->
+                    _uiState.value = _uiState.value.let { curr ->
+                        curr.copy(cloneState = curr.cloneState.copy(
+                            isGenerating = false,
+                            isPlaying = false,
+                            error = err,
+                            statusMessage = "பிழை: $err"
+                        ))
+                    }
+                }
+            )
+        }
+    }
+
+    fun stopCloningPlayback() {
+        cloningEngine.stopPlayback()
+        _uiState.value = _uiState.value.let { curr ->
+            curr.copy(cloneState = curr.cloneState.copy(
+                isPlaying = false,
+                isGenerating = false,
+                statusMessage = "குரல் இயக்கப்படுவது நிறுத்தப்பட்டது"
+            ))
+        }
+    }
+
+    fun exportClonedWav() {
+        val s = _uiState.value
+        val file = s.cloneState.lastGeneratedFile
+        if (file != null && file.exists()) {
+            val displayName = "Cloned_${s.cloneState.selectedProfile.id}_${System.currentTimeMillis()}.wav"
+            val uri = ttsManager.saveToDownloads(file, displayName)
+            val info = ttsManager.inspectWav(
+                file = file,
+                toneTitle = s.cloneState.selectedProfile.nameTa,
+                modulationTitle = "100% Cloned Whisper",
+                styleTitle = "Bae ASMR",
+                pitch = s.cloneState.selectedProfile.pitchMultiplier,
+                speed = s.cloneState.selectedProfile.speedMultiplier,
+                depth = "Deep Whisper",
+                emotion = "Romantic Calm",
+                textSnippet = s.inputText,
+                exportedUri = uri
+            )
+            _uiState.value = s.copy(
+                savedHistory = listOf(info) + s.savedHistory,
+                exportSuccessMessage = "Cloned Voice ஆடியோ வெற்றிகரமாக பதிவிறக்கப்பட்டது! (Downloads/Subiksha_TTS_Audio/)"
+            )
+        } else {
+            cloneAndSpeak()
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
+        cloningEngine.destroy()
         ttsManager.destroy()
     }
 
