@@ -128,32 +128,47 @@ class TtsViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Play sample quote for Character Voice (FineVoice style)
+     * Play sample quote for Character Voice (FineVoice style & real master audio)
      */
     fun playCharacterSample(character: CharacterVoice) {
-        val tone = VoicePresetsData.femaleTones.find { it.id == character.toneId } ?: _uiState.value.selectedTone
-        val mod = VoicePresetsData.voiceModulations.find { it.id == character.modulationId } ?: _uiState.value.selectedModulation
-        val style = VoicePresetsData.specialVoiceStyles.find { it.id == character.styleId } ?: _uiState.value.selectedStyle
-
-        val (pitch, speed) = calculateCombinedVoiceOutput(
-            tone = tone,
-            modulation = mod,
-            style = style,
-            pitchPercent = character.defaultPitchPercent,
-            speedMultiplier = character.defaultSpeed,
-            depth = VoiceDepth.MEDIUM,
-            emotion = if (character.isAsmr) VoiceEmotion.SOFT else VoiceEmotion.NORMAL
-        )
+        if (_uiState.value.previewingItemName == character.nameTa) {
+            // Toggle stop if already playing
+            ttsManager.stopExportedPlayback()
+            ttsManager.stop()
+            _uiState.value = _uiState.value.copy(previewingItemName = null)
+            return
+        }
 
         _uiState.value = _uiState.value.copy(previewingItemName = character.nameTa)
 
-        ttsManager.speak(
-            text = character.sampleQuoteTa,
-            pitch = pitch,
-            speed = speed,
-            isWhisper = character.isAsmr || mod.isWhisper || style.breathyEffect,
-            isRobotic = mod.isRobotic
-        )
+        if (character.assetAudioPath != null) {
+            // Play authentic master ASMR audio track
+            ttsManager.playAssetAudio(character.assetAudioPath) {
+                _uiState.value = _uiState.value.copy(previewingItemName = null)
+            }
+        } else {
+            val tone = VoicePresetsData.femaleTones.find { it.id == character.toneId } ?: _uiState.value.selectedTone
+            val mod = VoicePresetsData.voiceModulations.find { it.id == character.modulationId } ?: _uiState.value.selectedModulation
+            val style = VoicePresetsData.specialVoiceStyles.find { it.id == character.styleId } ?: _uiState.value.selectedStyle
+
+            val (pitch, speed) = calculateCombinedVoiceOutput(
+                tone = tone,
+                modulation = mod,
+                style = style,
+                pitchPercent = character.defaultPitchPercent,
+                speedMultiplier = character.defaultSpeed,
+                depth = VoiceDepth.MEDIUM,
+                emotion = if (character.isAsmr) VoiceEmotion.SOFT else VoiceEmotion.NORMAL
+            )
+
+            ttsManager.speak(
+                text = character.sampleQuoteTa,
+                pitch = pitch,
+                speed = speed,
+                isWhisper = character.isAsmr || mod.isWhisper || style.breathyEffect,
+                isRobotic = mod.isRobotic
+            )
+        }
     }
 
     /**

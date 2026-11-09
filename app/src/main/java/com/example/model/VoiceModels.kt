@@ -1,7 +1,6 @@
 package com.example.model
 
 import android.net.Uri
-import androidx.compose.ui.graphics.Color
 
 /**
  * 1. Female Voice - Tone வகைகள் (15 வகை பெண் குரல் தன்மைகள்)
@@ -63,12 +62,12 @@ data class CharacterVoice(
     val id: String,
     val nameEn: String,
     val nameTa: String,
-    val ageRole: String, // e.g. "A gentle teacher, early-30s"
+    val ageRole: String,
     val descriptionTa: String,
-    val tags: List<String>, // e.g. ["ASMR", "Whisper", "Close-Up", "Female"]
+    val tags: List<String>,
     val sampleQuoteTa: String,
     val usedCount: String,
-    val avatarColor: Long, // Hex color for avatar badge
+    val avatarColor: Long,
     val avatarInitial: String,
     val toneId: String,
     val modulationId: String,
@@ -76,7 +75,8 @@ data class CharacterVoice(
     val defaultPitchPercent: Int = 78,
     val defaultSpeed: Float = 1.0f,
     val isAsmr: Boolean = false,
-    val isCustomBuilt: Boolean = false
+    val isCustomBuilt: Boolean = false,
+    val assetAudioPath: String? = null // Bundled real master ASMR audio file in assets
 )
 
 /**
@@ -315,8 +315,8 @@ object VoicePresetsData {
             id = "whisper",
             titleEn = "Whisper",
             titleTa = "கிசுகிசுப்பான குரல் (ASMR)",
-            pitchMultiplier = 0.86f,
-            speedMultiplier = 0.84f,
+            pitchMultiplier = 0.84f,
+            speedMultiplier = 0.80f,
             descriptionTa = "ரகசியமான மெல்லிய காற்று கலந்த ஒலி",
             isWhisper = true
         ),
@@ -334,10 +334,10 @@ object VoicePresetsData {
         SpecialVoiceStyle(
             id = "girlfriend",
             titleEn = "Girlfriend Style",
-            titleTa = "காதலியைப் போல் அன்பாகப் பேசுதல்",
+            titleTa = "காதலியைப் போல் அன்பாகப் பேசுதல் (Bae Comfort)",
             descriptionTa = "கனிவும் அன்பும் கொஞ்சலும் கலந்த இனிமையான குரல்",
-            pitchOffset = 0.12f,
-            speedOffset = -0.04f,
+            pitchOffset = 0.10f,
+            speedOffset = -0.06f,
             warmIntimate = true
         ),
         SpecialVoiceStyle(
@@ -396,8 +396,8 @@ object VoicePresetsData {
             titleEn = "Breathless Soft Voice",
             titleTa = "மூச்சுக் கலந்த மென்மையான குரல் (ASMR Breathy)",
             descriptionTa = "மென்மையான மூச்சிரைப்பு கலந்த இதமான குரல்",
-            pitchOffset = 0.05f,
-            speedOffset = -0.16f,
+            pitchOffset = 0.04f,
+            speedOffset = -0.18f,
             breathyEffect = true
         ),
         SpecialVoiceStyle(
@@ -431,8 +431,8 @@ object VoicePresetsData {
             titleEn = "Sweet Whisper",
             titleTa = "இனிமையான கிசுகிசுப்பான குரல் (Ear-to-Ear)",
             descriptionTa = "இனிமையும் மென்மையும் கொண்ட கிசுகிசுப்பு",
-            pitchOffset = 0.14f,
-            speedOffset = -0.15f,
+            pitchOffset = 0.12f,
+            speedOffset = -0.18f,
             breathyEffect = true
         ),
         SpecialVoiceStyle(
@@ -454,9 +454,47 @@ object VoicePresetsData {
     )
 
     /**
-     * Character Voices matching the user's FineVoice and Spotify ASMR screenshots!
+     * Character Voices matching the user's FineVoice, Spotify, and uploaded Bae ASMR audios!
      */
     val characterVoices = listOf(
+        CharacterVoice(
+            id = "bae_calms_you",
+            nameEn = "Bae (Calms you after a fight)",
+            nameTa = "Bae (சண்டைக்குப் பின் அன்பான சமாதானம்)",
+            ageRole = "Loving girlfriend with ultra-soft binaural ear whisper",
+            descriptionTa = "நீங்கள் அனுப்பிய அசல் ஆடியோ குரல்: சண்டைக்குப் பின் செவிக்கு அருகில் மெல்லிய மூச்சுக் காற்றில் கொஞ்சிப் பேசும் ரொமாண்டிக் ASMR தளர்வுக் குரல்.",
+            tags = listOf("Bae ASMR", "Whisper", "Ear-to-Ear", "Romantic", "Original Master"),
+            sampleQuoteTa = "என்னங்க... இன்னமும் அப்செட்டா இருக்கீங்களா... வாங்க... என் மடியில் தலை வச்சு படுத்துக்கோங்க... என் தங்கம்...",
+            usedCount = "5.2k Used",
+            avatarColor = 0xFFBE185D,
+            avatarInitial = "B",
+            toneId = "calm_soft",
+            modulationId = "whisper",
+            styleId = "girlfriend",
+            defaultPitchPercent = 70,
+            defaultSpeed = 0.78f,
+            isAsmr = true,
+            assetAudioPath = "asmr/bae_calms_you.opus"
+        ),
+        CharacterVoice(
+            id = "bae_job_interview",
+            nameEn = "Bae Comfort (Morning & Interview Whisper)",
+            nameTa = "Bae Comfort (காலை விடியல் & ஆறுதல் விஸ்பர்)",
+            ageRole = "Sweet affectionate morning whisper to calm your interview anxiety",
+            descriptionTa = "நீங்கள் அனுப்பிய அசல் ஆடியோ குரல்: அதிகாலையில் மெல்ல எழுப்பி, பதற்றத்தைப் போக்கி, பாசத்துடன் ஊக்கப்படுத்தும் மென்மையான கிசுகிசுப்புக் குரல்.",
+            tags = listOf("Bae ASMR", "Morning Whisper", "Comfort", "Interview", "Original Master"),
+            sampleQuoteTa = "Good morning... இன்னைக்கு உங்களோட job interview மறந்துட்டீங்களா... வந்து என் பக்கத்துல உட்காருங்க... பதற்றப்படாதீங்க...",
+            usedCount = "4.1k Used",
+            avatarColor = 0xFF9333EA,
+            avatarInitial = "B",
+            toneId = "warm_smooth",
+            modulationId = "whisper",
+            styleId = "warm_intimate",
+            defaultPitchPercent = 72,
+            defaultSpeed = 0.80f,
+            isAsmr = true,
+            assetAudioPath = "asmr/job_interview_comfort.opus"
+        ),
         CharacterVoice(
             id = "subiksha_teacher",
             nameEn = "Subiksha (Teacher)",
@@ -488,8 +526,8 @@ object VoicePresetsData {
             toneId = "calm_soft",
             modulationId = "whisper",
             styleId = "breathless_soft",
-            defaultPitchPercent = 72,
-            defaultSpeed = 0.78f,
+            defaultPitchPercent = 70,
+            defaultSpeed = 0.76f,
             isAsmr = true
         ),
         CharacterVoice(
@@ -506,8 +544,8 @@ object VoicePresetsData {
             toneId = "soothing_relaxed",
             modulationId = "whisper",
             styleId = "warm_intimate",
-            defaultPitchPercent = 70,
-            defaultSpeed = 0.82f,
+            defaultPitchPercent = 68,
+            defaultSpeed = 0.78f,
             isAsmr = true
         ),
         CharacterVoice(
@@ -558,8 +596,8 @@ object VoicePresetsData {
             toneId = "sweet_gentle",
             modulationId = "emotional",
             styleId = "girlfriend",
-            defaultPitchPercent = 82,
-            defaultSpeed = 0.88f
+            defaultPitchPercent = 80,
+            defaultSpeed = 0.86f
         ),
         CharacterVoice(
             id = "kavya_storyteller",
@@ -599,9 +637,9 @@ object VoicePresetsData {
 
     val sampleTamilTexts = listOf(
         "வணக்கம்! சுபிக்ஷா டீச்சர் செயலிக்கு உங்களை அன்புடன் வரவேற்கிறோம்.",
+        "என்னங்க... இன்னமும் அப்செட்டா இருக்கீங்களா... வாங்க... என் மடியில் தலை வச்சு படுத்துக்கோங்க... என் தங்கம்...",
+        "Good morning... இன்னைக்கு உங்களோட interview... வாங்க குளிச்சிட்டு சூட் போட்டு வாங்க...",
         "கண்களை மூடி ஆழ்ந்து மூச்சை உள்ளிழுங்கள்... இந்த அமைதியான தமிழ் கிசுகிசுப்பு உங்கள் மனதை முழுமையாக தளர்வடையச் செய்யும்.",
-        "அகர முதல எழுத்தெல்லாம் ஆதி பகவன் முதற்றே உலகு. கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.",
-        "அன்பு மாணவச் செல்வங்களே! இன்றைய கணித மற்றும் அறிவியல் பாடங்களை நாம் மகிழ்ச்சியுடன் தொடங்குவோம்.",
-        "இரவு வானில் நட்சத்திரங்கள் மின்னுவதைப் போல, உங்கள் கனவுகளும் என்றும் பிரகாசமாக ஒளிரட்டும்."
+        "அகர முதல எழுத்தெல்லாம் ஆதி பகவன் முதற்றே உலகு. கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக."
     )
 }

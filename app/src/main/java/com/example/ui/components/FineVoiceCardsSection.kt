@@ -282,6 +282,26 @@ fun FineVoiceCharacterCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            if (character.assetAudioPath != null) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF059669).copy(alpha = 0.15f),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "🎧 நீங்கள் அனுப்பிய அசல் மாஸ்டர் ஆடியோ (Original Audio Track)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF059669)
+                        )
+                    }
+                }
+            }
+
             // Dark Quote Bubble (Just like FineVoice Screenshot 4)
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -320,7 +340,7 @@ fun FineVoiceCharacterCard(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (isPlaying) "ஒலிக்கிறது..." else "▶ Play",
+                                text = if (isPlaying) "⏹ நிறுத்து" else if (character.assetAudioPath != null) "▶ அசல் குரல்" else "▶ Play",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary

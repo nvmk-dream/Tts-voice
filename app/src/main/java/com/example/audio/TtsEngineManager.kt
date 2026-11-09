@@ -393,6 +393,31 @@ class TtsEngineManager(private val context: Context) : TextToSpeech.OnInitListen
         }
     }
 
+    /**
+     * Plays back bundled ASMR master track directly from app assets
+     */
+    fun playAssetAudio(assetPath: String, onFinished: () -> Unit) {
+        stopExportedPlayback()
+        stop()
+        try {
+            val afd = context.assets.openFd(assetPath)
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                afd.close()
+                prepare()
+                setOnCompletionListener {
+                    _isPlayingExported.value = false
+                    onFinished()
+                }
+                start()
+            }
+            _isPlayingExported.value = true
+        } catch (e: Exception) {
+            Log.e(TAG, "Asset MediaPlayer error: ${e.message}")
+            _isPlayingExported.value = false
+        }
+    }
+
     fun stopExportedPlayback() {
         try {
             mediaPlayer?.stop()
