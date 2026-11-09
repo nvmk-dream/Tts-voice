@@ -265,6 +265,28 @@ fun VoiceCloningSection(
                     }
                 }
 
+                // If IndicF5 mode selected, show IndicF5 IIT Madras details
+                AnimatedVisibility(visible = selectedMode == VoiceCloningMode.INDIC_F5) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 10.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(StudioPurplePrimary.copy(alpha = 0.08f))
+                            .padding(10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = StudioPurplePrimary, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "IIT Madras AI4Bharat IndicF5: உங்கள் Bae அசல் ஆடியோவிலிருந்து 100% Zero-Shot முறையில் தமிழ் உச்சரிப்புடன் குரல் குளோனிங் செய்யப்படுகிறது. கட்டணம் இல்லை, நேரடி AI குரல்.",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                }
+
                 // If ElevenLabs mode selected, show API key expander
                 AnimatedVisibility(visible = selectedMode == VoiceCloningMode.CLOUD_ELEVENLABS) {
                     Column(modifier = Modifier.padding(top = 12.dp)) {

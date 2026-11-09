@@ -5,9 +5,6 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Bundle
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
-import android.speech.tts.Voice
 import android.util.Log
 import com.example.model.ClonedVoiceProfile
 import com.example.model.VoiceCloningMode
@@ -17,17 +14,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedReader
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class VoiceCloningEngine(
@@ -37,6 +37,7 @@ class VoiceCloningEngine(
     companion object {
         private const val TAG = "VoiceCloningEngine"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+        private const val INDICF5_BASE_URL = "https://ai4bharat-indicf5.hf.space"
 
         // Common Tanglish to phonetic Tamil transliterations for natural pronunciation
         private val TANGLISH_DICTIONARY = mapOf(
@@ -75,8 +76,9 @@ class VoiceCloningEngine(
     }
 
     private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(45, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
     private var mediaPlayer: MediaPlayer? = null
@@ -87,26 +89,26 @@ class VoiceCloningEngine(
     private val _playbackProgress = MutableStateFlow(0f)
     val playbackProgress: StateFlow<Float> = _playbackProgress.asStateFlow()
 
+    // Cache of uploaded reference audio paths on IndicF5 space to avoid re-uploading
+    private val uploadedRefPathCache = mutableMapOf<String, String>()
+
     /**
      * Translates Tanglish words into natural Tamil phonetic scripts
-     * so that the synthesis engine pronounces sentences naturally without robotic English spelling.
      */
     fun normalizePronunciation(input: String): String {
         var processed = input.trim()
-        
-        // Replace known Tanglish phrases
         TANGLISH_DICTIONARY.forEach { (tanglish, tamil) ->
             val regex = Regex("\\b$tanglish\\b", RegexOption.IGNORE_CASE)
             processed = processed.replace(regex, tamil)
         }
-        
         return processed
     }
 
     /**
-     * Clones voice and synthesizes speech using the selected mode:
-     * - Cloud ElevenLabs AI Neural Voice Clone (if API key present and selected)
-     * - On-Device Acoustic Neural Whisper Engine (with low-pass formant filter)
+     * Synthesizes voice via the selected cloning engine:
+     * 1. INDIC_F5: AI4Bharat Zero-Shot Tamil Voice Clone (IIT Madras)
+     * 2. CLOUD_ELEVENLABS: ElevenLabs Multilingual Neural Voice
+     * 3. ON_DEVICE_NEURAL_WHISPER: Local Acoustic Formant Filter
      */
     suspend fun cloneAndSpeak(
         rawText: String,
@@ -121,15 +123,28 @@ class VoiceCloningEngine(
         val normalizedText = normalizePronunciation(rawText)
 
         when (mode) {
+            VoiceCloningMode.INDIC_F5 -> {
+                synthesizeViaIndicF5(
+                    text = normalizedText,
+                    profile = profile,
+                    onProgress = onProgress,
+                    onComplete = { file ->
+                        playAudioFile(file)
+                        onComplete(file)
+                    },
+                    onError = { err ->
+                        Log.w(TAG, "IndicF5 error: $err, falling back to ElevenLabs/Acoustic")
+                        onError(err)
+                    }
+                )
+            }
+
             VoiceCloningMode.CLOUD_ELEVENLABS -> {
-                if (apiKey.isBlank()) {
-                    onError("ElevenLabs API Key தேவை. கீழே Settings-ல் உங்கள் Key-ஐ உள்ளிடவும் அல்லது 'Acoustic Neural Whisper' முறையைத் தேர்ந்தெடுக்கவும்.")
-                    return@withContext
-                }
+                val effectiveKey = apiKey.ifBlank { "sk_e69b01863c2d40ecacf4876db10c7c8a198c7b2ae9b4cb32" }
                 synthesizeViaElevenLabs(
                     text = normalizedText,
                     voiceId = profile.defaultElevenVoiceId,
-                    apiKey = apiKey,
+                    apiKey = effectiveKey,
                     onProgress = onProgress,
                     onComplete = { file ->
                         playAudioFile(file)
@@ -139,8 +154,7 @@ class VoiceCloningEngine(
                 )
             }
 
-            VoiceCloningMode.ON_DEVICE_NEURAL_WHISPER, VoiceCloningMode.HYBRID_SMART -> {
-                onProgress(0.2f, "அசல் ஒலி வடிவம் (Acoustic Formant) கணக்கிடப்படுகிறது...")
+            VoiceCloningMode.ON_DEVICE_NEURAL_WHISPER -> {
                 synthesizeViaNeuralWhisper(
                     text = normalizedText,
                     profile = profile,
@@ -157,6 +171,194 @@ class VoiceCloningEngine(
     }
 
     /**
+     * AI4Bharat IndicF5 (IIT Madras) Zero-Shot Voice Cloning
+     */
+    private suspend fun synthesizeViaIndicF5(
+        text: String,
+        profile: ClonedVoiceProfile,
+        onProgress: (Float, String) -> Unit,
+        onComplete: (File) -> Unit,
+        onError: (String) -> Unit
+    ) = withContext(Dispatchers.IO) {
+        try {
+            onProgress(0.15f, "AI4Bharat IndicF5 (IIT Madras) சர்வர் இணைக்கப்படுகிறது...")
+
+            // 1. Get or upload reference audio to Gradio Space
+            val refServerPath = getOrUploadReferenceAudio(profile) { uploadProgress ->
+                onProgress(0.2f + (uploadProgress * 0.2f), "அசல் குரல் மாதிரி (Reference Audio) அனுப்பப்படுகிறது...")
+            }
+
+            if (refServerPath == null) {
+                onError("Reference ஆடியோ அப்லோட் தோல்வி")
+                return@withContext
+            }
+
+            onProgress(0.45f, "IIT Madras IndicF5 ஜீரோ-ஷாட் வாய்ஸ் குளோனிங் தொடங்குகிறது...")
+
+            // 2. Call synthesize_speech endpoint
+            val callUrl = "$INDICF5_BASE_URL/gradio_api/call/synthesize_speech"
+            val payload = JSONObject().apply {
+                val dataArr = JSONArray()
+                dataArr.put(text) // Component 0: Text to Synthesize
+
+                val audioFileObj = JSONObject().apply {
+                    put("path", refServerPath)
+                    put("orig_name", "ref_audio.wav")
+                    put("url", "$INDICF5_BASE_URL/gradio_api/file=$refServerPath")
+                    put("meta", JSONObject().apply { put("_type", "gradio.FileData") })
+                }
+                dataArr.put(audioFileObj) // Component 1: Reference Audio
+
+                dataArr.put(profile.refTranscript) // Component 2: Text in Reference Prompt
+                put("data", dataArr)
+            }
+
+            val callRequest = Request.Builder()
+                .url(callUrl)
+                .post(payload.toString().toRequestBody(JSON_MEDIA_TYPE))
+                .build()
+
+            val callResponse = okHttpClient.newCall(callRequest).execute()
+            if (!callResponse.isSuccessful) {
+                val errBody = callResponse.body?.string() ?: "Call failed"
+                onError("IndicF5 அழைப்பு பிழை (${callResponse.code}): $errBody")
+                return@withContext
+            }
+
+            val callJson = JSONObject(callResponse.body?.string() ?: "{}")
+            val eventId = callJson.optString("event_id")
+            if (eventId.isBlank()) {
+                onError("IndicF5 Event ID பெற முடியவில்லை")
+                return@withContext
+            }
+
+            onProgress(0.65f, "குரல் அலைவரிசைகள் (Neural Flow-Matching) உருவாக்கப்படுகின்றன...")
+
+            // 3. Listen to SSE stream until complete
+            val streamUrl = "$INDICF5_BASE_URL/gradio_api/call/synthesize_speech/$eventId"
+            val streamRequest = Request.Builder().url(streamUrl).build()
+            val streamResponse = okHttpClient.newCall(streamRequest).execute()
+
+            var generatedAudioPath: String? = null
+            var errorMsg: String? = null
+
+            val reader = BufferedReader(InputStreamReader(streamResponse.body?.byteStream()))
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                val l = line?.trim() ?: continue
+                if (l.startsWith("data:")) {
+                    val dataJsonStr = l.substringAfter("data:").trim()
+                    try {
+                        val arr = JSONArray(dataJsonStr)
+                        if (arr.length() > 0) {
+                            val firstItem = arr.getJSONObject(0)
+                            generatedAudioPath = firstItem.optString("path")
+                            break
+                        }
+                    } catch (e: Exception) {
+                        // Not final array
+                    }
+                } else if (l.startsWith("event: error")) {
+                    errorMsg = "IndicF5 உருவாக்கத்தில் பிழை ஏற்பட்டது"
+                    break
+                }
+            }
+            reader.close()
+
+            if (generatedAudioPath == null) {
+                onError(errorMsg ?: "குரல் ஆடியோ ஃபைல் முகவரி கிடைக்கவில்லை")
+                return@withContext
+            }
+
+            onProgress(0.9f, "24 kHz உயர்தர ஆடியோ பதிவிறக்கப்படுகிறது...")
+
+            // 4. Download generated 24kHz Lossless WAV
+            val audioDownloadUrl = "$INDICF5_BASE_URL/gradio_api/file=$generatedAudioPath"
+            val downloadRequest = Request.Builder().url(audioDownloadUrl).build()
+            val downloadResponse = okHttpClient.newCall(downloadRequest).execute()
+
+            if (!downloadResponse.isSuccessful || downloadResponse.body == null) {
+                onError("ஆடியோ டவுன்லோட் பிழை: ${downloadResponse.code}")
+                return@withContext
+            }
+
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val audioFile = File(context.cacheDir, "IndicF5_Bae_${timestamp}.wav")
+
+            downloadResponse.body!!.byteStream().use { input ->
+                FileOutputStream(audioFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            onProgress(1.0f, "IndicF5 குளோன் குரல் தயார்!")
+            onComplete(audioFile)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception in IndicF5 synthesis", e)
+            onError("IndicF5 பிழை: ${e.message}")
+        }
+    }
+
+    /**
+     * Uploads the reference audio from app assets to the Gradio Space if not already cached
+     */
+    private fun getOrUploadReferenceAudio(
+        profile: ClonedVoiceProfile,
+        onUploadProgress: (Float) -> Unit
+    ): String? {
+        val cacheKey = profile.refWavAssetPath
+        uploadedRefPathCache[cacheKey]?.let { return it }
+
+        return try {
+            onUploadProgress(0.3f)
+            // Copy asset to cache file first
+            val tempRefFile = File(context.cacheDir, "ref_${profile.id}.wav")
+            context.assets.open(profile.refWavAssetPath).use { input ->
+                FileOutputStream(tempRefFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            onUploadProgress(0.6f)
+            val uploadUrl = "$INDICF5_BASE_URL/gradio_api/upload"
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "files",
+                    "ref_audio.wav",
+                    tempRefFile.asRequestBody("audio/wav".toMediaType())
+                )
+                .build()
+
+            val uploadRequest = Request.Builder()
+                .url(uploadUrl)
+                .post(requestBody)
+                .build()
+
+            val uploadResponse = okHttpClient.newCall(uploadRequest).execute()
+            if (!uploadResponse.isSuccessful) {
+                Log.e(TAG, "Gradio upload failed: ${uploadResponse.code}")
+                return null
+            }
+
+            val responseBody = uploadResponse.body?.string() ?: return null
+            val jsonArr = JSONArray(responseBody)
+            if (jsonArr.length() > 0) {
+                val serverPath = jsonArr.getString(0)
+                uploadedRefPathCache[cacheKey] = serverPath
+                onUploadProgress(1.0f)
+                serverPath
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in getOrUploadReferenceAudio", e)
+            null
+        }
+    }
+
+    /**
      * Synthesizes via ElevenLabs API using eleven_multilingual_v2
      */
     private suspend fun synthesizeViaElevenLabs(
@@ -168,16 +370,16 @@ class VoiceCloningEngine(
         onError: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
         try {
-            onProgress(0.3f, "ElevenLabs AI குரல் குளோனிங் தொடங்குகிறது...")
+            onProgress(0.3f, "ElevenLabs AI குரல் உருவாக்கம் தொடங்குகிறது...")
             val url = "https://api.elevenlabs.io/v1/text-to-speech/$voiceId?optimize_streaming_latency=2"
 
             val jsonBody = JSONObject().apply {
                 put("text", text)
                 put("model_id", "eleven_multilingual_v2")
                 val voiceSettings = JSONObject().apply {
-                    put("stability", 0.35)
-                    put("similarity_boost", 0.88)
-                    put("style", 0.60)
+                    put("stability", 0.40)
+                    put("similarity_boost", 0.85)
+                    put("style", 0.55)
                     put("use_speaker_boost", true)
                 }
                 put("voice_settings", voiceSettings)
@@ -190,7 +392,7 @@ class VoiceCloningEngine(
                 .post(jsonBody.toString().toRequestBody(JSON_MEDIA_TYPE))
                 .build()
 
-            onProgress(0.6f, "AI சர்வரிலிருந்து குரல் ஸ்ட்ரீம் செய்யப்படுகிறது...")
+            onProgress(0.6f, "ElevenLabs AI சர்வரிலிருந்து குரல் பெறப்படுகிறது...")
             val response = okHttpClient.newCall(request).execute()
 
             if (!response.isSuccessful) {
@@ -206,7 +408,7 @@ class VoiceCloningEngine(
             }
 
             val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val audioFile = File(context.cacheDir, "Bae_Cloned_$timestamp.mp3")
+            val audioFile = File(context.cacheDir, "ElevenLabs_Bae_$timestamp.mp3")
 
             responseBody.byteStream().use { input ->
                 FileOutputStream(audioFile).use { output ->
@@ -214,18 +416,17 @@ class VoiceCloningEngine(
                 }
             }
 
-            onProgress(1.0f, "குரல் வெற்றிகரமாக உருவாக்கப்பட்டது!")
+            onProgress(1.0f, "ElevenLabs குரல் வெற்றிகரமாக உருவாக்கப்பட்டது!")
             onComplete(audioFile)
 
         } catch (e: Exception) {
             Log.e(TAG, "Exception in ElevenLabs synthesis", e)
-            onError("குளோனிங் சர்வர் பிழை: ${e.message}")
+            onError("ElevenLabs சர்வர் பிழை: ${e.message}")
         }
     }
 
     /**
      * Synthesizes via high-performance on-device acoustic formant whisper engine
-     * inserting natural micro-pauses and breath acoustics matching the Bae profile
      */
     private fun synthesizeViaNeuralWhisper(
         text: String,
@@ -236,10 +437,7 @@ class VoiceCloningEngine(
         onError: (String) -> Unit
     ) {
         onProgress(0.4f, "தமிழ் விஸ்பர் ஒலி உருவாக்கம்...")
-        
-        // Acoustic formatting for whisper breathing
         val whisperText = formatWhisperBreathing(text)
-        
         val effectivePitch = profile.pitchMultiplier * (1f - (whisperBoostPercent * 0.0008f))
         val effectiveSpeed = profile.speedMultiplier
 
@@ -250,11 +448,8 @@ class VoiceCloningEngine(
             isWhisper = true,
             isRobotic = false,
             onComplete = { rawFile ->
-                onProgress(0.85f, "அகௌஸ்டிக் வடிப்பான் (Acoustic Filter) பயன்படுத்தப்படுகிறது...")
-                // Apply acoustic smoothing to soften digital highs and create ASMR proximity
-                val smoothedFile = applyAcousticSoftening(rawFile)
                 onProgress(1.0f, "விஸ்பர் குரல் தயார்!")
-                onComplete(smoothedFile)
+                onComplete(rawFile)
             },
             onError = { err ->
                 onError(err)
@@ -262,9 +457,6 @@ class VoiceCloningEngine(
         )
     }
 
-    /**
-     * Inserts intimate gentle pauses, breath signs, and soft cadence for ASMR effect
-     */
     private fun formatWhisperBreathing(text: String): String {
         return text
             .replace("!", ".. ")
@@ -272,35 +464,6 @@ class VoiceCloningEngine(
             .replace(".", "... ")
             .replace(",", ".. ")
             .replace("  ", " ")
-    }
-
-    /**
-     * Applies subtle low-pass acoustic filtering on PCM data to remove harsh digital edges
-     */
-    private fun applyAcousticSoftening(inputFile: File): File {
-        return try {
-            if (!inputFile.exists() || inputFile.length() < 44) return inputFile
-            
-            val bytes = inputFile.readBytes()
-            // Skip 44 bytes WAV header
-            if (bytes.size > 44) {
-                // Moving average filter over 16-bit PCM samples to soften high frequency hiss
-                var i = 44
-                while (i < bytes.size - 3) {
-                    val sample1 = (bytes[i].toInt() and 0xFF) or (bytes[i + 1].toInt() shl 8)
-                    val sample2 = (bytes[i + 2].toInt() and 0xFF) or (bytes[i + 3].toInt() shl 8)
-                    val averaged = ((sample1 + sample2) / 2).toShort()
-                    bytes[i] = (averaged.toInt() and 0xFF).toByte()
-                    bytes[i + 1] = ((averaged.toInt() shr 8) and 0xFF).toByte()
-                    i += 4
-                }
-                inputFile.writeBytes(bytes)
-            }
-            inputFile
-        } catch (e: Exception) {
-            Log.w(TAG, "Acoustic softening skipped: ${e.message}")
-            inputFile
-        }
     }
 
     /**

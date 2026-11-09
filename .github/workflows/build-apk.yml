@@ -77,12 +77,13 @@ jobs:
             ## சுபிக்ஷா டீச்சர் செயலி (Subiksha Teacher App) - Tamil Female TTS Studio
             
             ### புதிய அம்சங்கள் (Features):
-            * 15 வகை பெண் குரல் டோன்கள் (15 Female Tones with Instant Previews)
-            * 10 வகை குரல் மாடுலேஷன்கள் (10 Voice Modulations)
-            * 14 தனித்துவமான பெண் குரல் பாணிகள் (14 Special Voice Styles)
-            * சுருதி (Pitch: 78%), பேச்சு வேகம் (Speed: 1.0x), குரல் கனம் (Depth), உணர்ச்சி (Emotion) கட்டுப்பாடுகள்
-            * தரம் குறையாத WAV ஆடியோ பதிவிறக்கம் (Lossless WAV Audio Download)
-            * ஆடியோ விவரங்கள் அறியும் வசதி (Audio Details Inspector)
+            * ✦ IIT Madras AI4Bharat IndicF5 Zero-Shot Tamil Voice Cloning (அசல் Bae விஸ்பர் குரல் குளோனிங்)
+            * ✦ ElevenLabs Multilingual Neural Voice Integration (User Pre-configured Key)
+            * ✦ 15 வகை பெண் குரல் டோன்கள் (15 Female Tones with Instant Previews)
+            * ✦ 10 வகை குரல் மாடுலேஷன்கள் (10 Voice Modulations) & 14 தனித்துவமான பெண் குரல் பாணிகள்
+            * ✦ சுருதி (Pitch: 78%), பேச்சு வேகம் (Speed: 1.0x), விஸ்பர் கட்டுப்பாடுகள்
+            * ✦ தரம் குறையாத 24kHz WAV ஆடியோ பதிவிறக்கம் (Lossless WAV Audio Download)
+            * ✦ Tanglish to Natural Tamil Phonetic Speech (இயற்கையான உச்சரிப்பு)
             
             ### நிறுவும் முறை (Installation):
             1. கீழே உள்ள `Subiksha_TTS_v1.0.apk` கோப்பைப் பதிவிறக்கவும் (Download).

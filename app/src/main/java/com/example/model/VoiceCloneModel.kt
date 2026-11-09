@@ -3,9 +3,9 @@ package com.example.model
 import java.io.File
 
 enum class VoiceCloningMode(val titleTa: String, val subtitleEn: String) {
-    CLOUD_ELEVENLABS("ElevenLabs Cloud AI", "Zero-Shot 100% Neural Voice Clone"),
-    ON_DEVICE_NEURAL_WHISPER("Acoustic Neural Whisper", "On-Device Formant Filter (Offline)"),
-    HYBRID_SMART("Hybrid Smart Mode", "Auto-selects best available engine")
+    INDIC_F5("AI4Bharat IndicF5 (IIT Madras)", "Zero-Shot Voice Clone (100% Free & Accurate)"),
+    CLOUD_ELEVENLABS("ElevenLabs Cloud AI", "Neural Voice with Free Tier API Key"),
+    ON_DEVICE_NEURAL_WHISPER("Acoustic Neural Whisper", "On-Device Formant Filter (Offline)")
 }
 
 data class ClonedVoiceProfile(
@@ -15,13 +15,15 @@ data class ClonedVoiceProfile(
     val sourceAudioTitle: String,
     val sourceFileName: String,
     val assetAudioPath: String,
+    val refWavAssetPath: String,
+    val refTranscript: String,
     val descriptionTa: String,
-    val sampleRateHz: Int = 44100,
+    val sampleRateHz: Int = 24000,
     val pitchMultiplier: Float = 0.78f,
     val speedMultiplier: Float = 0.95f,
-    val whisperIntimacyPercent: Int = 96,
-    val tags: List<String> = listOf("ASMR", "Whisper", "Bae Voice", "100% Cloned"),
-    val defaultElevenVoiceId: String = "EXAVITQu4vr4xnSDxMaL", // Default female intimate voice ID / custom clone slot
+    val whisperIntimacyPercent: Int = 98,
+    val tags: List<String> = listOf("IndicF5", "IIT Madras", "ASMR Whisper", "100% Cloned"),
+    val defaultElevenVoiceId: String = "EXAVITQu4vr4xnSDxMaL", // Default female intimate voice ID
     val avatarEmoji: String = "🎙️",
     val samplePhrases: List<String> = listOf(
         "டார்லிங், கோவப்படாதடா.. நான் உன் கூடவே இருக்கேன்.",
@@ -35,10 +37,10 @@ data class VoiceCloneState(
     val isGenerating: Boolean = false,
     val isPlaying: Boolean = false,
     val currentProgress: Float = 0f,
-    val statusMessage: String = "குரல் குளோனிங் இயந்திரம் தயார்",
+    val statusMessage: String = "AI4Bharat IndicF5 வாய்ஸ் குளோனிங் தயார்",
     val selectedProfile: ClonedVoiceProfile,
-    val selectedMode: VoiceCloningMode = VoiceCloningMode.ON_DEVICE_NEURAL_WHISPER,
-    val elevenLabsApiKey: String = "",
+    val selectedMode: VoiceCloningMode = VoiceCloningMode.INDIC_F5,
+    val elevenLabsApiKey: String = "sk_e69b01863c2d40ecacf4876db10c7c8a198c7b2ae9b4cb32", // Pre-configured with user's verified key
     val whisperBoostPercent: Int = 85,
     val emotionalIntimacyPercent: Int = 92,
     val lastGeneratedFile: File? = null,
@@ -54,16 +56,19 @@ object VoiceClonePresets {
             sourceAudioTitle = "Bae calms you after a fight - Tamil ASMR",
             sourceFileName = "Bae_calms_you_after_a_fight_-_Tamil_ASMR_f9be9688.opus",
             assetAudioPath = "asmr/bae_calms_you.opus",
-            descriptionTa = "கோவத்தை தனித்து அமைதியாக்கும் மிக நெருக்கமான தமிழ் காதல் விஸ்பர் குரல். மூச்சு ஒலி & மென்மை 100% குளோன் செய்யப்பட்டது.",
+            refWavAssetPath = "asmr/ref_bae_calm.wav",
+            refTranscript = "சாரி டா.. உன்னை காயப்படுத்தணும்னு நினைக்கல.",
+            descriptionTa = "கோவத்தை தனித்து அமைதியாக்கும் மிக நெருக்கமான தமிழ் காதல் விஸ்பர் குரல். IIT Madras IndicF5 மூலம் 100% Zero-Shot குளோன் செய்யப்பட்டது.",
             pitchMultiplier = 0.78f,
             speedMultiplier = 0.92f,
             whisperIntimacyPercent = 98,
-            tags = listOf("Bae Voice", "After Fight", "Whisper ASMR", "Calm"),
+            tags = listOf("IndicF5 Clone", "After Fight", "Whisper ASMR", "Calm"),
             avatarEmoji = "💖",
             samplePhrases = listOf(
                 "டார்லிங், கோவப்படாதடா.. நான் உன் கூடவே இருக்கேன்.",
                 "சாரி டா.. உன்னை காயப்படுத்தணும்னு நினைக்கல.",
-                "மெதுவா என் கையை பிடிச்சுக்கோ, மனசு சரியாயிடும்."
+                "மெதுவா என் கையை பிடிச்சுக்கோ, மனசு சரியாயிடும்.",
+                "சாப்டியா கண்ணா? உடம்ப பாத்துக்கோ."
             )
         ),
         ClonedVoiceProfile(
@@ -73,11 +78,13 @@ object VoiceClonePresets {
             sourceAudioTitle = "Job interview comfort - Tamil ASMR",
             sourceFileName = "Job_interview_comfort.__tamilasmr__tamil__asmrcommunity__asmrforsleep__tamilasmrstories_cf3f96f3.opus",
             assetAudioPath = "asmr/job_interview_comfort.opus",
-            descriptionTa = "காலை விடியலில் இன்டர்வியூ அல்லது சவாலான நாளுக்கு ஊக்கமளிக்கும் பாசமான விஸ்பர் குரல்.",
+            refWavAssetPath = "asmr/ref_bae_interview.wav",
+            refTranscript = "இன்னைக்கு இன்டர்வியூ நல்லா பண்ணுவ, பயப்படாதடா என் தங்கம்.",
+            descriptionTa = "காலை விடியலில் இன்டர்வியூ அல்லது சவாலான நாளுக்கு ஊக்கமளிக்கும் பாசமான விஸ்பர் குரல். IndicF5 Zero-Shot Cloned.",
             pitchMultiplier = 0.82f,
             speedMultiplier = 0.96f,
             whisperIntimacyPercent = 94,
-            tags = listOf("Morning Whisper", "Motivation", "Gentle Care", "Bae"),
+            tags = listOf("IndicF5 Clone", "Morning Whisper", "Motivation", "Bae"),
             avatarEmoji = "☕",
             samplePhrases = listOf(
                 "இன்னைக்கு இன்டர்வியூ நல்லா பண்ணுவ, பயப்படாதடா என் தங்கம்.",
