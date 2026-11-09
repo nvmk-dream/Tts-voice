@@ -1,0 +1,6 @@
+{
+  "name": "Subiksha TTS",
+  "description": "Subiksha Teacher App - Tamil Female Voice Studio: 15+ Tones, 10+ Modulations, 14+ Voice Styles, Lossless Audio Download and Details Inspector.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
