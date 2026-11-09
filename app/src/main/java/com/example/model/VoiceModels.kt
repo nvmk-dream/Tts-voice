@@ -1,6 +1,7 @@
 package com.example.model
 
 import android.net.Uri
+import androidx.compose.ui.graphics.Color
 
 /**
  * 1. Female Voice - Tone வகைகள் (15 வகை பெண் குரல் தன்மைகள்)
@@ -10,7 +11,7 @@ data class FemaleTone(
     val titleEn: String,
     val titleTa: String,
     val descriptionTa: String,
-    val category: String, // "General", "Professional", "Emotional", "Storytelling", "Youth"
+    val category: String, // "General", "Professional", "Emotional", "Storytelling", "Youth", "ASMR"
     val basePitch: Float,
     val baseRate: Float
 )
@@ -25,7 +26,6 @@ data class VoiceModulation(
     val pitchMultiplier: Float,
     val speedMultiplier: Float,
     val descriptionTa: String,
-    val cadencePauseMs: Long = 0L,
     val isRobotic: Boolean = false,
     val isWhisper: Boolean = false
 )
@@ -55,6 +55,29 @@ enum class VoiceEmotion(val titleTa: String, val pitchFactor: Float, val speedFa
     NORMAL("Normal (வழக்கமான)", 1.00f, 1.00f),
     EXPRESSIVE("Expressive (வெளிப்படையான)", 1.08f, 1.05f)
 }
+
+/**
+ * FineVoice & Spotify ASMR Style Character Voice Profile
+ */
+data class CharacterVoice(
+    val id: String,
+    val nameEn: String,
+    val nameTa: String,
+    val ageRole: String, // e.g. "A gentle teacher, early-30s"
+    val descriptionTa: String,
+    val tags: List<String>, // e.g. ["ASMR", "Whisper", "Close-Up", "Female"]
+    val sampleQuoteTa: String,
+    val usedCount: String,
+    val avatarColor: Long, // Hex color for avatar badge
+    val avatarInitial: String,
+    val toneId: String,
+    val modulationId: String,
+    val styleId: String,
+    val defaultPitchPercent: Int = 78,
+    val defaultSpeed: Float = 1.0f,
+    val isAsmr: Boolean = false,
+    val isCustomBuilt: Boolean = false
+)
 
 /**
  * Detailed Metadata for Exported Lossless Audio
@@ -178,7 +201,7 @@ object VoicePresetsData {
         FemaleTone(
             id = "soothing_relaxed",
             titleEn = "Female, Soothing, Relaxed",
-            titleTa = "ஆறுதலான குரல்",
+            titleTa = "ஆறுதலான தளர்வுக் குரல்",
             descriptionTa = "இளைப்பாறும் உணர்வைத் தரும் இதமான குரல்",
             category = "General",
             basePitch = 0.92f,
@@ -291,9 +314,9 @@ object VoicePresetsData {
         VoiceModulation(
             id = "whisper",
             titleEn = "Whisper",
-            titleTa = "கிசுகிசுப்பான குரல்",
+            titleTa = "கிசுகிசுப்பான குரல் (ASMR)",
             pitchMultiplier = 0.86f,
-            speedMultiplier = 0.88f,
+            speedMultiplier = 0.84f,
             descriptionTa = "ரகசியமான மெல்லிய காற்று கலந்த ஒலி",
             isWhisper = true
         ),
@@ -371,10 +394,10 @@ object VoicePresetsData {
         SpecialVoiceStyle(
             id = "breathless_soft",
             titleEn = "Breathless Soft Voice",
-            titleTa = "மூச்சுக் கலந்த மென்மையான குரல்",
+            titleTa = "மூச்சுக் கலந்த மென்மையான குரல் (ASMR Breathy)",
             descriptionTa = "மென்மையான மூச்சிரைப்பு கலந்த இதமான குரல்",
             pitchOffset = 0.05f,
-            speedOffset = -0.14f,
+            speedOffset = -0.16f,
             breathyEffect = true
         ),
         SpecialVoiceStyle(
@@ -406,10 +429,10 @@ object VoicePresetsData {
         SpecialVoiceStyle(
             id = "sweet_whisper",
             titleEn = "Sweet Whisper",
-            titleTa = "இனிமையான கிசுகிசுப்பான குரல்",
+            titleTa = "இனிமையான கிசுகிசுப்பான குரல் (Ear-to-Ear)",
             descriptionTa = "இனிமையும் மென்மையும் கொண்ட கிசுகிசுப்பு",
             pitchOffset = 0.14f,
-            speedOffset = -0.12f,
+            speedOffset = -0.15f,
             breathyEffect = true
         ),
         SpecialVoiceStyle(
@@ -430,11 +453,155 @@ object VoicePresetsData {
         )
     )
 
+    /**
+     * Character Voices matching the user's FineVoice and Spotify ASMR screenshots!
+     */
+    val characterVoices = listOf(
+        CharacterVoice(
+            id = "subiksha_teacher",
+            nameEn = "Subiksha (Teacher)",
+            nameTa = "சுபிக்ஷா (ஆசிரியர்)",
+            ageRole = "A caring teacher, early-30s with clear, gentle guidance",
+            descriptionTa = "கனிவும் அன்பும் கலந்த பள்ளி ஆசிரியை பாணி. மாணவர்கள் எளிதாகப் புரிந்து கொள்ளும் தெளிவான உச்சரிப்பு.",
+            tags = listOf("Teacher", "Clear", "Gentle", "Original"),
+            sampleQuoteTa = "அன்பு மாணவர்களே! இன்றைய பாடத்தை நாம் புன்னகையுடன் தொடங்குவோம். கவனமாகக் கேளுங்கள்.",
+            usedCount = "1.8k Used",
+            avatarColor = 0xFF6B21A8,
+            avatarInitial = "சு",
+            toneId = "warm_smooth",
+            modulationId = "medium_pitch",
+            styleId = "affectionate",
+            defaultPitchPercent = 78,
+            defaultSpeed = 0.95f
+        ),
+        CharacterVoice(
+            id = "abby_asmr",
+            nameEn = "Abby (ASMR Hypnotic)",
+            nameTa = "அபிநயா (ASMR தூக்கக் குரல்)",
+            ageRole = "Hypnotic ASMR Artist, soft whisper for deep sleep",
+            descriptionTa = "செவிக்கு மிக அருகில் ஒலிக்கும் ஹிப்னாடிக் கிசுகிசுப்பு. ஆழ்ந்த தளர்வையும் தூக்கத்தையும் வரவழைக்கும்.",
+            tags = listOf("ASMR", "Sleep", "Whisper", "Close-Mic"),
+            sampleQuoteTa = "கண்களை மூடுங்கள்... மெல்ல மூச்சை உள்ளிழுங்கள்... இந்த அமைதியான தமிழ் ஒலி உங்கள் மனதை லேசாக்கும்...",
+            usedCount = "2.4k Used",
+            avatarColor = 0xFF831843,
+            avatarInitial = "அ",
+            toneId = "calm_soft",
+            modulationId = "whisper",
+            styleId = "breathless_soft",
+            defaultPitchPercent = 72,
+            defaultSpeed = 0.78f,
+            isAsmr = true
+        ),
+        CharacterVoice(
+            id = "aviva_breathy",
+            nameEn = "Aviva (Breathy Whispers)",
+            nameTa = "அவிவா (மூச்சுக் கலந்த மென் குரல்)",
+            ageRole = "Intimate breathy narrator to relax your mind",
+            descriptionTa = "மென்மையான மூச்சிரைப்பு கலந்த நெருக்கமான விஸ்பர். மன அழுத்தத்தைப் போக்கி இதம் தரும் ஒலி.",
+            tags = listOf("ASMR", "Breathy", "Intimate", "Relaxing"),
+            sampleQuoteTa = "அமைதியாக இருங்கள்... கவலைகள் அனைத்தையும் மறந்து என் குரலின் மெல்லிய அதிர்வை மட்டும் உணருங்கள்...",
+            usedCount = "1.5k Used",
+            avatarColor = 0xFFBE185D,
+            avatarInitial = "அ",
+            toneId = "soothing_relaxed",
+            modulationId = "whisper",
+            styleId = "warm_intimate",
+            defaultPitchPercent = 70,
+            defaultSpeed = 0.82f,
+            isAsmr = true
+        ),
+        CharacterVoice(
+            id = "margaret_calm",
+            nameEn = "Margaret (Warm Mid-40s)",
+            nameTa = "மார்கரெட் (அமைதியான தாய்க்குரல்)",
+            ageRole = "A warm, mid-40s woman with a soft, comforting presence",
+            descriptionTa = "அனுபவம் வாய்ந்த முதிர்ச்சியான தாயின் பாசக் குரல். நம்பிக்கை தரும் கம்பீரமும் அமைதியும் நிறைந்தது.",
+            tags = listOf("Middle Aged", "Calm", "Warm", "Narrator"),
+            sampleQuoteTa = "வாழ்க்கை அழகானது... நாம் கடந்து செல்லும் ஒவ்வொரு கணமும் ஒரு புதிய தொடக்கமே. கவலைப்படாதே கண்ணா.",
+            usedCount = "920 Used",
+            avatarColor = 0xFFB45309,
+            avatarInitial = "மா",
+            toneId = "mature_elegant",
+            modulationId = "medium_pitch",
+            styleId = "affectionate",
+            defaultPitchPercent = 74,
+            defaultSpeed = 0.92f
+        ),
+        CharacterVoice(
+            id = "sierra_lively",
+            nameEn = "Sierra (Lively Youth)",
+            nameTa = "சியேரா (துடிப்பான இளமை)",
+            ageRole = "A lively, late-20s woman with vibrant cheerful energy",
+            descriptionTa = "புத்துணர்ச்சியும் உற்சாகமும் பொங்கும் இளம்பெண் குரல். எனர்ஜி தரும் வேகமான நட்புப் பேச்சு.",
+            tags = listOf("Young", "Lively", "Cheerful", "Original"),
+            sampleQuoteTa = "ஹேய் வணக்கம்! நாம் நினைத்தால் சாதிக்க முடியாதது எதுவுமே இல்லை. உடனே களத்தில் இறங்குவோம் வாருங்கள்!",
+            usedCount = "1.1k Used",
+            avatarColor = 0xFF047857,
+            avatarInitial = "சி",
+            toneId = "energetic_lively",
+            modulationId = "fast_speech",
+            styleId = "playful",
+            defaultPitchPercent = 88,
+            defaultSpeed = 1.15f
+        ),
+        CharacterVoice(
+            id = "meera_romantic",
+            nameEn = "Meera (Romantic Soft)",
+            nameTa = "மீரா (காதல் மென் குரல்)",
+            ageRole = "Sweet affectionate romantic partner voice",
+            descriptionTa = "காதலியைப் போன்ற கொஞ்சலும், பாசமும் நிறைந்த இதமான குரல். இனிமை ததும்பும் வெளிப்பாடு.",
+            tags = listOf("Romantic", "Sweet", "Affectionate", "Intimate"),
+            sampleQuoteTa = "உன்னிடம் பேசும் ஒவ்வொரு நொடியும் எனக்கு வசந்த காலம் தான்... எப்போதும் என் அருகிலேயே இரு...",
+            usedCount = "3.2k Used",
+            avatarColor = 0xFF9D174D,
+            avatarInitial = "மீ",
+            toneId = "sweet_gentle",
+            modulationId = "emotional",
+            styleId = "girlfriend",
+            defaultPitchPercent = 82,
+            defaultSpeed = 0.88f
+        ),
+        CharacterVoice(
+            id = "kavya_storyteller",
+            nameEn = "Kavya (Bedtime Storyteller)",
+            nameTa = "காவியா (இரவு கதை சொல்லி)",
+            ageRole = "Enchanting storyteller for children and bedtime novels",
+            descriptionTa = "கற்பனை உலகிற்கு அழைத்துச் செல்லும் வசீகரமான கதை சொல்லும் நடை. மெதுவான நயமான உச்சரிப்பு.",
+            tags = listOf("Storytelling", "Emotional", "Bedtime", "Drama"),
+            sampleQuoteTa = "ஒரு அடர்ந்த காட்டின் நடுவே... சிறிய வெள்ளி நிலவின் ஒளியில், அந்த தேவதை மெல்ல இறங்கி வந்தது...",
+            usedCount = "1.4k Used",
+            avatarColor = 0xFF4338CA,
+            avatarInitial = "கா",
+            toneId = "storytelling_emotional",
+            modulationId = "dramatic",
+            styleId = "warm_intimate",
+            defaultPitchPercent = 76,
+            defaultSpeed = 0.86f
+        ),
+        CharacterVoice(
+            id = "divya_husky",
+            nameEn = "Divya (Deep Husky)",
+            nameTa = "திவ்யா (ஆழமான காந்தக்குரல்)",
+            ageRole = "Deep gravelly magnetic voice for podcasts and audiobooks",
+            descriptionTa = "அடிக்குரலில் ஒலிக்கும் காந்தக் கரகரப்பு. பாட்காஸ்ட்கள் மற்றும் ஆவணப்படங்களுக்கு மிகவும் ஏற்றது.",
+            tags = listOf("Deep", "Husky", "Podcast", "Strong"),
+            sampleQuoteTa = "உண்மைகள் எப்போதுமே உரக்கப் பேசுவதில்லை... அதன் ஆழத்தை நாம் உணர்ந்து கொள்ள வேண்டும்.",
+            usedCount = "890 Used",
+            avatarColor = 0xFF374151,
+            avatarInitial = "தி",
+            toneId = "confident_strong",
+            modulationId = "low_pitch",
+            styleId = "husky",
+            defaultPitchPercent = 64,
+            defaultSpeed = 0.95f
+        )
+    )
+
     val sampleTamilTexts = listOf(
         "வணக்கம்! சுபிக்ஷா டீச்சர் செயலிக்கு உங்களை அன்புடன் வரவேற்கிறோம்.",
+        "கண்களை மூடி ஆழ்ந்து மூச்சை உள்ளிழுங்கள்... இந்த அமைதியான தமிழ் கிசுகிசுப்பு உங்கள் மனதை முழுமையாக தளர்வடையச் செய்யும்.",
         "அகர முதல எழுத்தெல்லாம் ஆதி பகவன் முதற்றே உலகு. கற்க கசடறக் கற்பவை கற்றபின் நிற்க அதற்குத் தக.",
-        "இன்று வானிலை மிகவும் இனிமையாக உள்ளது. தென்றல் காற்று மெல்ல வீசுகிறது, மனதுக்கு அமைதி தருகிறது.",
         "அன்பு மாணவச் செல்வங்களே! இன்றைய கணித மற்றும் அறிவியல் பாடங்களை நாம் மகிழ்ச்சியுடன் தொடங்குவோம்.",
-        "நிலவொளியில் பூத்த மலர்களைப் போல உங்கள் புன்னகை என்றும் மலர்ந்திருக்கட்டும்."
+        "இரவு வானில் நட்சத்திரங்கள் மின்னுவதைப் போல, உங்கள் கனவுகளும் என்றும் பிரகாசமாக ஒளிரட்டும்."
     )
 }

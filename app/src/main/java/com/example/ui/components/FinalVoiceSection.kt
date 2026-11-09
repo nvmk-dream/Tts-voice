@@ -21,8 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -54,8 +54,6 @@ import com.example.model.SpecialVoiceStyle
 import com.example.model.VoiceModulation
 import com.example.ui.theme.AudioWaveActive
 import com.example.ui.theme.StudioCoralTertiary
-import com.example.ui.theme.StudioPurpleDark
-import com.example.ui.theme.StudioPurpleLight
 import com.example.ui.theme.StudioPurplePrimary
 import com.example.ui.theme.StudioRoseSecondary
 import com.example.ui.theme.SuccessGreen
@@ -66,6 +64,7 @@ fun FinalVoiceSection(
     selectedTone: FemaleTone,
     selectedModulation: VoiceModulation,
     selectedStyle: SpecialVoiceStyle,
+    activeCharacterName: String?,
     effectivePitch: Float,
     effectiveSpeed: Float,
     isSpeaking: Boolean,
@@ -74,6 +73,7 @@ fun FinalVoiceSection(
     onSpeakClick: () -> Unit,
     onStopClick: () -> Unit,
     onExportClick: () -> Unit,
+    onBuildVoiceClick: () -> Unit,
     onViewDetailsClick: () -> Unit
 ) {
     Card(
@@ -170,6 +170,15 @@ fun FinalVoiceSection(
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                if (activeCharacterName != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("தேர்ந்தெடுக்கப்பட்ட குரல்:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(activeCharacterName, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = StudioPurplePrimary)
+                    }
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -207,12 +216,35 @@ fun FinalVoiceSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Waveform Visualizer
             VoiceWaveformVisualizer(isSpeaking = isSpeaking)
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Prominent "🔨 Build Voice" Button
+            Button(
+                onClick = onBuildVoiceClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = StudioCoralTertiary
+                ),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("build_voice_main_button")
+            ) {
+                Icon(Icons.Default.Build, contentDescription = "Build Voice")
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "🔨 இந்த அமைப்பில் புதிய குரலை உருவாக்கு (Build Voice)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Main Primary Controls
             Row(

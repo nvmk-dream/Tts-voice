@@ -30,6 +30,8 @@ class ExampleRobolectricTest {
     assertTrue(VoicePresetsData.femaleTones.size >= 15)
     assertTrue(VoicePresetsData.voiceModulations.size >= 10)
     assertTrue(VoicePresetsData.specialVoiceStyles.size >= 14)
+    assertTrue(VoicePresetsData.characterVoices.isNotEmpty())
+    assertTrue(VoicePresetsData.characterVoices.any { it.isAsmr })
   }
 
   @Test
